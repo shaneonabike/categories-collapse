@@ -1,11 +1,11 @@
 jQuery(document).ready(function($){
 	$('.open-widget').click(function(){
-		if($(".x-termcollapse").hasClass('in')){
-			$('.x-termcollapse').removeClass('in');
+		if($(".fieldset-wrapper.collapse").hasClass('in')){
+			$('.fieldset-wrapper.collapse').removeClass('in');
 		}
 		else{
-			$('.x-termcollapse').addClass('in');
-			$('.x-termcollapse').css('height', 'auto');
+			$('.fieldset-wrapper.collapse').addClass('in');
+			$('.fieldset-wrapper.collapse').css('height', 'auto');
 		}
 	});
 });

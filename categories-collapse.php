@@ -9,6 +9,15 @@
    License: GPL2
    */
 
+
+  // Register JS
+  function categories_collapse_scripts() {
+    wp_enqueue_script('jquery');
+    wp_enqueue_script('categories-collapse', plugins_url('/js/categories-collapse.js', __FILE__) );
+  }
+  add_action('wp_enqueue_scripts', 'categories_collapse_scripts');
+
+
   // Register and load the widget
   function categories_collapse_load_widget() {
     register_widget( 'categories_collapse_widget' );
@@ -48,30 +57,43 @@
          
   // Widget Backend 
   public function form( $instance ) {
-	if ( isset( $instance[ 'title' ] ) ) { 
-	   $title = $instance[ 'title' ]; 
-        } else {
+      if ( isset( $instance[ 'title' ] ) ) { 
+	   $title = $instance[ 'title' ];
+       } else {
 	  $title = __( 'Collapsible Categories', 'categories_collapse_widget_domain' );
-        }
+       }
+       $curr_post_type = '';
+      if (isset($instance['post_type'] ) ) {
+	$curr_post_type = $instance['post_type'];
+      }
 
-  // Widget admin form
+      // Grab all the post types
+      $post_types= get_post_types(array('publicly_queryable'=>TRUE), 'objects');
+
+      // Widget admin form
 ?>
   <p>
-  <label for="<?php echo $this->get_field_id( 'title' ); ?>"><?php _e( 'Title:' ); ?></label> 
+  <label for="<?php echo $this->get_field_id( 'title' ); ?>"><?php _e( 'Title:' ); echo $curr_post_type; ?></label> 
   <input class="widefat" id="<?php echo $this->get_field_id( 'title' ); ?>" name="<?php echo $this->get_field_name( 'title' ); ?>" type="text" value="<?php echo esc_attr( $title ); ?>" />
   <select id="<?php echo $this->get_field_id('post_type'); ?>"  name="<?php echo $this->get_field_name('post_type'); ?>">
-			<?php for($x=1;$x<=10;$x++): ?>
-			<option <?php echo $x == $post_type ? 'selected="selected"' : '';?> value="<?php echo $x;?>"><?php echo $x; ?></option>
-			<?php endfor;?>
-		</select>
+  <?php foreach ( $post_types as $post_type ) : ?>
+	<option <?php echo $post_type->name == $curr_post_type ? 'selected="selected"' : '';?> value="<?php echo $post_type->name; ?>"><?php echo $post_type->name; ?></option>
+   <?php endforeach; ?>
+   </select>
   </p>
+
 <?php 
   }
      
   // Updating widget replacing old instances with new
   public function update( $new_instance, $old_instance ) {
 	$instance = array();
+
+	// Update title
 	$instance['title'] = ( ! empty( $new_instance['title'] ) ) ? strip_tags( $new_instance['title'] ) : '';
+
+	// Update category selected
+	$instance['post_type'] = $new_instance['post_type'];
 	return $instance;
   }
 
@@ -92,10 +114,8 @@ function categories_collapse_posts_by_taxonomy($post_type = 'posts') {
  	$terms = get_terms( $taxonomy );
  
     	  foreach( $terms as $term ) : ?>
- 
-      	    <?php echo $term->name; ?>
- 
-            <?php
+              <?php
+	      // Output the posts associated to this term
       	      $args = array(
                 'post_type' => $post_type,
                 'posts_per_page' => -1,  //show all posts
@@ -108,26 +128,29 @@ function categories_collapse_posts_by_taxonomy($post_type = 'posts') {
                 )
  
                );
-            $posts = new WP_Query($args);
- 
-            if( $posts->have_posts() ): while( $posts->have_posts() ) : $posts->the_post(); ?>
- 
-                    <?php if(has_post_thumbnail()) { ?>
-                            <?php the_post_thumbnail(); ?>
-                    <?php }
-                    /* no post image so show a default img */
-                    else { ?>
-                           <img src="<?php bloginfo('template_url'); ?>/assets/img/default-img.png" alt="<?php echo get_the_title(); ?>" title="<?php echo get_the_title(); ?>" width="110" height="110" />
-                    <?php } ?>
- 
-                   <?php  echo get_the_title(); ?>
- 
-                        <?php the_excerpt(); ?>
-                   
- 
-            <?php endwhile; endif; ?>
+              $posts = new WP_Query($args);
+	    ?>
+
+      	    <div class="single-term-wrapper"><fieldset class="open-widget collapsible">
+              <legend><span class="fieldset-legend">
+                <a class="fieldset-title" href="#"><?php echo $term->name; ?> (<?php echo $posts->found_posts;?>)</a>
+              </span></legend>
+              <div class="fieldset-wrapper collapse"> 
+
+	    <?php
+              if( $posts->have_posts() ): while( $posts->have_posts() ) : $posts->the_post(); ?>
+		   <div class="term-post-wrapper">
+                     <h3 class="<?php echo $post_type; ?>-title"><?php  echo get_the_title(); ?></h3>
+                     <div class="post-desc"><?php the_excerpt(); ?></div>
+		     <?php if ($post_type == 'resource') : ?>
+		       <div class="resource-description"><?php echo get_post_meta(get_the_ID(), 'resource_description', true); ?></div>
+		       <div class="resource-link"><a href="<?php echo get_post_meta(get_the_ID(), 'resource_link', true); ?>"><?php _e('See website', 'categories-collapse-link-click'); ?></a></div>
+		    <?php endif; ?>
+                   </div>
+              <?php endwhile; endif; ?>
+	     </div></fieldset></div>
  
           <?php endforeach;
- 
-       endforeach; ?>
+
+        endforeach;
 }
